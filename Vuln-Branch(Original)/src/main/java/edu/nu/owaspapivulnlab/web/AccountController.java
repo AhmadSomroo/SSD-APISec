@@ -11,6 +11,7 @@ import edu.nu.owaspapivulnlab.model.Account;
 import edu.nu.owaspapivulnlab.model.AppUser;
 import edu.nu.owaspapivulnlab.repo.AccountRepository;
 import edu.nu.owaspapivulnlab.repo.AppUserRepository;
+import edu.nu.owaspapivulnlab.service.InputValidationService;
 import edu.nu.owaspapivulnlab.service.ResourceOwnershipValidator;
 
 import java.util.Collections;
@@ -26,13 +27,16 @@ public class AccountController {
     private final AppUserRepository users;
     private final ResourceOwnershipValidator ownershipValidator;
     private final AccountMapper accountMapper;
+    private final InputValidationService inputValidationService;
 
     public AccountController(AccountRepository accounts, AppUserRepository users, 
-                           ResourceOwnershipValidator ownershipValidator, AccountMapper accountMapper) {
+                           ResourceOwnershipValidator ownershipValidator, AccountMapper accountMapper,
+                           InputValidationService inputValidationService) {
         this.accounts = accounts;
         this.users = users;
         this.ownershipValidator = ownershipValidator;
         this.accountMapper = accountMapper;
+        this.inputValidationService = inputValidationService;
     }
 
     // SECURITY FIX: Account balance access with ownership validation
@@ -56,6 +60,22 @@ public class AccountController {
     // FIXED: API9 Improper Assets Management - Validates transfer amounts
     @PostMapping("/{id}/transfer")
     public ResponseEntity<?> transfer(@PathVariable("id") Long id, @Valid @RequestBody AccountTransferRequestDTO transferRequest) {
+        // SECURITY FIX: Validate account ID parameter
+        InputValidationService.ValidationResult idValidation = inputValidationService.validateNumericId(id);
+        if (!idValidation.isValid()) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", idValidation.getErrorMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+        
+        // SECURITY FIX: Additional validation for transfer amount
+        InputValidationService.ValidationResult amountValidation = inputValidationService.validateTransferAmount(transferRequest.getAmount());
+        if (!amountValidation.isValid()) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", amountValidation.getErrorMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+        
         // SECURITY FIX: Check ownership before processing transfer
         // Prevents users from transferring money from accounts they don't own
         if (!ownershipValidator.canAccessAccountResource(id)) {

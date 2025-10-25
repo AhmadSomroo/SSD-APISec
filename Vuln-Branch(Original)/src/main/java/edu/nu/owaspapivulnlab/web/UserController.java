@@ -8,6 +8,7 @@ import edu.nu.owaspapivulnlab.dto.UserResponseDTO;
 import edu.nu.owaspapivulnlab.mapper.UserMapper;
 import edu.nu.owaspapivulnlab.model.AppUser;
 import edu.nu.owaspapivulnlab.repo.AppUserRepository;
+import edu.nu.owaspapivulnlab.service.InputValidationService;
 import edu.nu.owaspapivulnlab.service.PasswordService;
 import edu.nu.owaspapivulnlab.service.ResourceOwnershipValidator;
 
@@ -22,13 +23,16 @@ public class UserController {
     private final PasswordService passwordService;
     private final ResourceOwnershipValidator ownershipValidator;
     private final UserMapper userMapper;
+    private final InputValidationService inputValidationService;
 
     public UserController(AppUserRepository users, PasswordService passwordService, 
-                         ResourceOwnershipValidator ownershipValidator, UserMapper userMapper) {
+                         ResourceOwnershipValidator ownershipValidator, UserMapper userMapper,
+                         InputValidationService inputValidationService) {
         this.users = users;
         this.passwordService = passwordService;
         this.ownershipValidator = ownershipValidator;
         this.userMapper = userMapper;
+        this.inputValidationService = inputValidationService;
     }
 
     // SECURITY FIX: Resource ownership validation for user access + DTO protection
@@ -54,7 +58,33 @@ public class UserController {
     // FIXED: API6 Mass Assignment - DTO prevents role/isAdmin manipulation
     // FIXED: API3 Excessive Data Exposure - Response DTO hides sensitive fields
     @PostMapping
-    public ResponseEntity<UserResponseDTO> create(@Valid @RequestBody UserCreateRequestDTO requestDTO) {
+    public ResponseEntity<?> create(@Valid @RequestBody UserCreateRequestDTO requestDTO) {
+        // SECURITY FIX: Validate and sanitize all input fields
+        InputValidationService.ValidationResult usernameValidation = inputValidationService.validateUsername(requestDTO.getUsername());
+        if (!usernameValidation.isValid()) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", usernameValidation.getErrorMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+        
+        InputValidationService.ValidationResult emailValidation = inputValidationService.validateEmail(requestDTO.getEmail());
+        if (!emailValidation.isValid()) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", emailValidation.getErrorMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+        
+        InputValidationService.ValidationResult passwordValidation = inputValidationService.validatePassword(requestDTO.getPassword());
+        if (!passwordValidation.isValid()) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", passwordValidation.getErrorMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+        
+        // SECURITY FIX: Use sanitized values
+        requestDTO.setUsername(usernameValidation.getSanitizedValue());
+        requestDTO.setEmail(emailValidation.getSanitizedValue());
+        
         // SECURITY FIX: Use DTO to prevent mass assignment
         // UserMapper ensures role=USER and isAdmin=false are set server-side
         AppUser user = userMapper.toEntity(requestDTO);
@@ -89,7 +119,17 @@ public class UserController {
             return ResponseEntity.status(403).body(error);
         }
         
-        List<AppUser> results = users.search(q);
+        // SECURITY FIX: Validate and sanitize search query
+        InputValidationService.ValidationResult queryValidation = inputValidationService.validateSearchQuery(q);
+        if (!queryValidation.isValid()) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", queryValidation.getErrorMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+        
+        // SECURITY FIX: Use sanitized query for search
+        String sanitizedQuery = queryValidation.getSanitizedValue();
+        List<AppUser> results = users.search(sanitizedQuery);
         // SECURITY FIX: Use DTOs to prevent exposure of sensitive fields
         List<UserResponseDTO> responseDTOs = userMapper.toResponseDTOs(results);
         return ResponseEntity.ok(responseDTOs);

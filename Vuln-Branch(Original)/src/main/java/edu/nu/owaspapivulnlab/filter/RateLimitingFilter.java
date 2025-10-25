@@ -88,7 +88,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
      * Handle rate limit exceeded - return HTTP 429
      */
     private void handleRateLimitExceeded(HttpServletResponse response, Bucket bucket) throws IOException {
-        response.setStatus(HttpServletResponse.SC_TOO_MANY_REQUESTS); // 429 Too Many Requests
+        response.setStatus(429); // 429 Too Many Requests
         response.setContentType("application/json");
         
         Map<String, Object> errorResponse = new HashMap<>();
