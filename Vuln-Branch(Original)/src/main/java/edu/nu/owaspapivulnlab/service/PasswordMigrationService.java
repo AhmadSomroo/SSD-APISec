@@ -16,21 +16,21 @@ import java.util.List;
 @Service
 @Order(1000) // Run after data seeding
 public class PasswordMigrationService implements CommandLineRunner {
-    
+
     private final AppUserRepository userRepository;
     private final PasswordService passwordService;
-    
+
     public PasswordMigrationService(AppUserRepository userRepository, PasswordService passwordService) {
         this.userRepository = userRepository;
         this.passwordService = passwordService;
     }
-    
+
     @Override
     @Transactional
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         migratePasswords();
     }
-    
+
     /**
      * Migrates all plaintext passwords to BCrypt hashes.
      * Only processes passwords that are not already hashed.
@@ -38,40 +38,36 @@ public class PasswordMigrationService implements CommandLineRunner {
     public void migratePasswords() {
         List<AppUser> users = userRepository.findAll();
         int migratedCount = 0;
-        
+
         for (AppUser user : users) {
             if (needsMigration(user.getPassword())) {
                 try {
                     String originalPassword = user.getPassword();
-                    // Only hash passwords that meet strength requirements
-                    if (passwordService.isPasswordStrong(originalPassword)) {
-                        String hashedPassword = passwordService.hashPassword(originalPassword);
-                        user.setPassword(hashedPassword);
-                        userRepository.save(user);
-                        migratedCount++;
-                        
-                        // Log migration (in production, use proper logging)
-                        System.out.println("Migrated password for user: " + user.getUsername());
-                    } else {
-                        System.out.println("Skipped migration for user " + user.getUsername() + " - password does not meet strength requirements");
-                    }
+
+                    // Always hash passwords — even weak ones
+                    String hashedPassword = passwordService.hashPassword(originalPassword);
+                    user.setPassword(hashedPassword);
+                    userRepository.save(user);
+                    migratedCount++;
+
+                    // Log migration (in production, use proper logging)
+                    System.out.println("✅ Migrated password for user: " + user.getUsername());
                 } catch (Exception e) {
                     // Log error but continue with other users
-                    System.err.println("Failed to migrate password for user " + user.getUsername() + ": " + e.getMessage());
+                    System.err.println("❌ Failed to migrate password for user " + user.getUsername() + ": " + e.getMessage());
                 }
             }
         }
-        
+
         if (migratedCount > 0) {
-            System.out.println("Password migration completed. Migrated " + migratedCount + " passwords.");
+            System.out.println("🔒 Password migration completed. Migrated " + migratedCount + " passwords.");
         } else {
-            System.out.println("No password migration needed. All passwords are already hashed.");
+            System.out.println("ℹ️ No password migration needed. All passwords are already hashed.");
         }
     }
-    
+
     /**
      * Determines if a password needs migration from plaintext to BCrypt.
-     * 
      * @param password the password to check
      * @return true if the password needs migration, false if already hashed
      */
@@ -79,38 +75,32 @@ public class PasswordMigrationService implements CommandLineRunner {
         if (password == null || password.isEmpty()) {
             return false;
         }
-        
         // BCrypt hashes start with $2a$, $2b$, $2x$, or $2y$
         return !password.startsWith("$2");
     }
-    
+
     /**
      * Manually trigger password migration (useful for testing or manual operations).
-     * 
      * @return the number of passwords migrated
      */
     @Transactional
     public int triggerMigration() {
         List<AppUser> users = userRepository.findAll();
         int migratedCount = 0;
-        
+
         for (AppUser user : users) {
             if (needsMigration(user.getPassword())) {
                 try {
-                    // Only hash passwords that meet strength requirements
-                    if (passwordService.isPasswordStrong(user.getPassword())) {
-                        String hashedPassword = passwordService.hashPassword(user.getPassword());
-                        user.setPassword(hashedPassword);
-                        userRepository.save(user);
-                        migratedCount++;
-                    }
+                    String hashedPassword = passwordService.hashPassword(user.getPassword());
+                    user.setPassword(hashedPassword);
+                    userRepository.save(user);
+                    migratedCount++;
                 } catch (Exception e) {
-                    // Log error but continue
                     System.err.println("Migration failed for user " + user.getUsername() + ": " + e.getMessage());
                 }
             }
         }
-        
+
         return migratedCount;
     }
 }
