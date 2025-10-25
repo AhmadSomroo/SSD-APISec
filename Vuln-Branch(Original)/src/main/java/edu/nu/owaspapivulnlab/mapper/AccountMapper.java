@@ -8,28 +8,28 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * SECURITY FIX: Mapper for safe Account entity-DTO conversion
- * FIXED: API3 Excessive Data Exposure - Controls what account data is exposed
+ * SECURITY FIX: Account mapper for safe entity-DTO conversion
+ * Ensures only appropriate account data is exposed
  */
 @Component
 public class AccountMapper {
-    
+
     /**
      * Convert Account entity to safe response DTO
-     * Excludes ownerUserId to prevent information leakage
+     * SECURITY: Only exposes essential account information
      */
     public AccountResponseDTO toResponseDTO(Account account) {
         if (account == null) {
             return null;
         }
         
-        return AccountResponseDTO.builder()
-                .id(account.getId())
-                .iban(account.getIban())
-                .balance(account.getBalance())
-                .build();
+        AccountResponseDTO dto = new AccountResponseDTO();
+        dto.setId(account.getId());
+        dto.setBalance(account.getBalance());
+        dto.setOwnerUserId(account.getOwnerUserId());
+        return dto;
     }
-    
+
     /**
      * Convert list of Account entities to response DTOs
      */
