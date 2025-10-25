@@ -84,4 +84,71 @@ public class RateLimitingService {
     public long getAvailableTokens(Bucket bucket) {
         return bucket.getAvailableTokens();
     }
+    
+    /**
+     * Get rate limit information for a specific bucket type
+     */
+    public RateLimitInfo getRateLimitInfo(String clientId, String endpointType) {
+        Bucket bucket = getBucketForType(clientId, endpointType);
+        if (bucket == null) {
+            return null;
+        }
+        
+        return new RateLimitInfo(
+            bucket.getAvailableTokens(),
+            getLimitForType(endpointType),
+            System.currentTimeMillis() + 60000 // Reset in 1 minute
+        );
+    }
+    
+    /**
+     * Get bucket for specific endpoint type
+     */
+    private Bucket getBucketForType(String clientId, String endpointType) {
+        switch (endpointType.toLowerCase()) {
+            case "login":
+                return getLoginBucket(clientId);
+            case "transfer":
+                return getTransferBucket(clientId);
+            case "general":
+                return getGeneralBucket(clientId);
+            default:
+                return getGeneralBucket(clientId);
+        }
+    }
+    
+    /**
+     * Get limit for specific endpoint type
+     */
+    private int getLimitForType(String endpointType) {
+        switch (endpointType.toLowerCase()) {
+            case "login":
+                return 5;
+            case "transfer":
+                return 10;
+            case "general":
+                return 30;
+            default:
+                return 30;
+        }
+    }
+    
+    /**
+     * Rate limit information container
+     */
+    public static class RateLimitInfo {
+        private final long remaining;
+        private final int limit;
+        private final long resetTime;
+        
+        public RateLimitInfo(long remaining, int limit, long resetTime) {
+            this.remaining = remaining;
+            this.limit = limit;
+            this.resetTime = resetTime;
+        }
+        
+        public long getRemaining() { return remaining; }
+        public int getLimit() { return limit; }
+        public long getResetTime() { return resetTime; }
+    }
 }
