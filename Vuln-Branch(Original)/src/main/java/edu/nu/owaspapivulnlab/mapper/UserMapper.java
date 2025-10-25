@@ -9,28 +9,28 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * SECURITY FIX: Mapper for safe User entity-DTO conversion
- * FIXED: API3 Excessive Data Exposure - Controls what data is exposed to clients
+ * SECURITY FIX: User mapper for safe entity-DTO conversion
+ * Ensures sensitive fields are never exposed in responses
  */
 @Component
 public class UserMapper {
-    
+
     /**
      * Convert AppUser entity to safe response DTO
-     * Excludes sensitive fields: password, role, isAdmin
+     * SECURITY: Excludes password, role, and isAdmin fields
      */
     public UserResponseDTO toResponseDTO(AppUser user) {
         if (user == null) {
             return null;
         }
         
-        return UserResponseDTO.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .build();
+        UserResponseDTO dto = new UserResponseDTO();
+        dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
+        // SECURITY: Sensitive fields intentionally excluded
+        return dto;
     }
-    
+
     /**
      * Convert list of AppUser entities to response DTOs
      */
@@ -39,22 +39,22 @@ public class UserMapper {
                 .map(this::toResponseDTO)
                 .collect(Collectors.toList());
     }
-    
+
     /**
-     * Convert create request DTO to AppUser entity
-     * Server controls role and isAdmin - prevents mass assignment
+     * Convert request DTO to AppUser entity for creation
+     * SECURITY: Server controls role and isAdmin assignment
      */
     public AppUser toEntity(UserCreateRequestDTO dto) {
         if (dto == null) {
             return null;
         }
         
-        return AppUser.builder()
-                .username(dto.getUsername())
-                .password(dto.getPassword()) // Will be hashed by service layer
-                .email(dto.getEmail())
-                .role("USER") // SECURITY: Server-controlled, always USER for new accounts
-                .isAdmin(false) // SECURITY: Server-controlled, always false for new accounts
-                .build();
+        AppUser user = new AppUser();
+        user.setUsername(dto.getUsername());
+        user.setPassword(dto.getPassword()); // Will be hashed by service
+        // SECURITY FIX: Server-side assignment prevents mass assignment
+        user.setRole("USER"); // Always USER for new accounts
+        user.setAdmin(false); // Always false for new accounts
+        return user;
     }
 }

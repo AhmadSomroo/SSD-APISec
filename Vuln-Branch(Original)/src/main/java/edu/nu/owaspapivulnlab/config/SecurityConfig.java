@@ -1,9 +1,11 @@
 package edu.nu.owaspapivulnlab.config;
 
+import edu.nu.owaspapivulnlab.filter.RateLimitingFilter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,6 +27,9 @@ public class SecurityConfig {
 
     @Value("${app.jwt.secret}")
     private String secret;
+    
+    @Autowired
+    private RateLimitingFilter rateLimitingFilter;
 
     // SECURITY FIX: Hardened SecurityFilterChain configuration
     // FIXED: API7 Security Misconfiguration - Removed overly permissive endpoint access
@@ -59,6 +64,9 @@ public class SecurityConfig {
 
         http.headers(h -> h.frameOptions(f -> f.disable())); // allow H2 console
 
+        // SECURITY FIX: Add rate limiting filter before JWT filter
+        // FIXED: API4 Lack of Resources & Rate Limiting - Prevents abuse and brute-force attacks
+        http.addFilterBefore(rateLimitingFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(new JwtFilter(secret), org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
