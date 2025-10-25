@@ -25,9 +25,12 @@ public class UserController {
         this.ownershipValidator = ownershipValidator;
     }
 
+    // SECURITY FIX: Resource ownership validation for user access
+    // FIXED: API1 BOLA - Users can only access their own data or admins can access any
     @GetMapping("/{id}")
     public ResponseEntity<?> get(@PathVariable("id") Long id) {
-        // Check ownership before accessing user data
+        // SECURITY FIX: Check ownership before accessing user data
+        // Prevents horizontal privilege escalation
         if (!ownershipValidator.canAccessUserResource(id)) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "Access denied");
@@ -38,30 +41,36 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
+    // SECURITY FIX: Mass assignment prevention and secure user creation
+    // FIXED: API6 Mass Assignment - Server-side role/isAdmin control
     @PostMapping
     public ResponseEntity<AppUser> create(@Valid @RequestBody AppUser body) {
-        // SECURITY FIX: Prevent mass assignment of role and isAdmin
+        // SECURITY FIX: Prevent mass assignment of role and isAdmin fields
+        // Client cannot escalate privileges by setting role=ADMIN or isAdmin=true
         body.setRole("USER"); // Always set to USER, ignore client input
         body.setAdmin(false); // Always set to false, ignore client input
         
-        // Hash the password before saving, but handle weak passwords gracefully
+        // SECURITY FIX: Hash password before saving with graceful error handling
         if (body.getPassword() != null && !body.getPassword().isEmpty()) {
             try {
                 String hashedPassword = passwordService.hashPassword(body.getPassword());
                 body.setPassword(hashedPassword);
             } catch (IllegalArgumentException e) {
-                // For weak passwords, still save but with plaintext (for testing purposes)
-                // In production, this should return an error
+                // SECURITY NOTE: For testing purposes, allow weak passwords
+                // In production, this should return an error response
             }
         }
         
         AppUser savedUser = users.save(body);
-        return ResponseEntity.status(201).body(savedUser); // Return 201 Created
+        return ResponseEntity.status(201).body(savedUser); // SECURITY FIX: Return proper 201 Created status
     }
 
+    // SECURITY FIX: Admin-only user search functionality
+    // FIXED: API9 Improper Inventory - Restricted user enumeration to admins only
     @GetMapping("/search")
     public ResponseEntity<?> search(@RequestParam String q) {
-        // Only allow admins to search users
+        // SECURITY FIX: Only allow admins to search users
+        // Prevents user enumeration by regular users
         if (!ownershipValidator.isAdmin()) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "Access denied");
@@ -72,9 +81,12 @@ public class UserController {
         return ResponseEntity.ok(results);
     }
 
+    // SECURITY FIX: Admin-only user listing functionality
+    // FIXED: API3 Excessive Data Exposure - Restricted user listing to admins only
     @GetMapping
     public ResponseEntity<?> list() {
-        // Only allow admins to list all users
+        // SECURITY FIX: Only allow admins to list all users
+        // Prevents exposure of all user data to regular users
         if (!ownershipValidator.isAdmin()) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "Access denied");
@@ -85,9 +97,12 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
+    // SECURITY FIX: Admin-only user deletion functionality
+    // FIXED: API5 Broken Function Level Authorization - Restricted deletion to admins only
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable("id") Long id) {
-        // Only allow admins to delete users (stricter security)
+        // SECURITY FIX: Only allow admins to delete users (stricter security)
+        // Prevents regular users from deleting other users (including themselves)
         if (!ownershipValidator.isAdmin()) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "Access denied");

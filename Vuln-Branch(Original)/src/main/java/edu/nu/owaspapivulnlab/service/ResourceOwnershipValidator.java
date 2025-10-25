@@ -10,6 +10,19 @@ import edu.nu.owaspapivulnlab.repo.AppUserRepository;
 
 import java.util.Optional;
 
+/**
+ * SECURITY FIX: Resource ownership validation service
+ * FIXED: API1 BOLA (Broken Object Level Authorization)
+ * 
+ * This service ensures that users can only access resources they own,
+ * preventing horizontal privilege escalation attacks.
+ * 
+ * Key Features:
+ * - Maps JWT subject to user ID for ownership validation
+ * - Validates account ownership before allowing access
+ * - Supports admin override for administrative operations
+ * - Prevents users from accessing other users' resources
+ */
 @Service
 public class ResourceOwnershipValidator {
     
@@ -22,7 +35,8 @@ public class ResourceOwnershipValidator {
     }
     
     /**
-     * Get the current authenticated user ID from JWT subject
+     * SECURITY FIX: Get the current authenticated user ID from JWT subject
+     * Maps the JWT subject (username) to the actual user ID for ownership validation
      */
     public Long getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -35,7 +49,8 @@ public class ResourceOwnershipValidator {
     }
     
     /**
-     * Check if the current user owns the specified account
+     * SECURITY FIX: Check if the current user owns the specified account
+     * Prevents API1 BOLA attacks by validating account ownership
      */
     public boolean isAccountOwner(Long accountId) {
         Long currentUserId = getCurrentUserId();
@@ -48,7 +63,8 @@ public class ResourceOwnershipValidator {
     }
     
     /**
-     * Check if the current user is accessing their own user resource
+     * SECURITY FIX: Check if the current user is accessing their own user resource
+     * Prevents horizontal privilege escalation in user operations
      */
     public boolean isUserResourceOwner(Long userId) {
         Long currentUserId = getCurrentUserId();
@@ -56,7 +72,8 @@ public class ResourceOwnershipValidator {
     }
     
     /**
-     * Check if the current user has admin role
+     * SECURITY FIX: Check if the current user has admin role
+     * Validates admin privileges from JWT claims for role-based access control
      */
     public boolean isAdmin() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

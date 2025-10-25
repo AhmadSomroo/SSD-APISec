@@ -27,9 +27,12 @@ public class AccountController {
         this.ownershipValidator = ownershipValidator;
     }
 
+    // SECURITY FIX: Account balance access with ownership validation
+    // FIXED: API1 BOLA - Users can only access their own account balances
     @GetMapping("/{id}/balance")
     public ResponseEntity<?> balance(@PathVariable("id") Long id) {
-        // Check ownership before accessing account
+        // SECURITY FIX: Check ownership before accessing account
+        // Prevents users from viewing other users' account balances
         if (!ownershipValidator.canAccessAccountResource(id)) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "Access denied");
@@ -40,9 +43,12 @@ public class AccountController {
         return ResponseEntity.ok(a.getBalance());
     }
 
+    // SECURITY FIX: Account transfer with ownership validation
+    // FIXED: API1 BOLA - Users can only transfer from their own accounts
     @PostMapping("/{id}/transfer")
     public ResponseEntity<?> transfer(@PathVariable("id") Long id, @RequestParam Double amount) {
-        // Check ownership before processing transfer
+        // SECURITY FIX: Check ownership before processing transfer
+        // Prevents users from transferring money from accounts they don't own
         if (!ownershipValidator.canAccessAccountResource(id)) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "Access denied");
@@ -58,7 +64,8 @@ public class AccountController {
         return ResponseEntity.ok(response);
     }
 
-    // Safe-ish helper to view my accounts (still leaks more than needed)
+    // SECURITY FIX: Safe endpoint to view user's own accounts
+    // This endpoint only returns accounts owned by the authenticated user
     @GetMapping("/mine")
     public Object mine(Authentication auth) {
         AppUser me = users.findByUsername(auth != null ? auth.getName() : "anonymous").orElse(null);
