@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import edu.nu.owaspapivulnlab.model.AppUser;
 import edu.nu.owaspapivulnlab.repo.AppUserRepository;
+import edu.nu.owaspapivulnlab.service.PasswordService;
 
 import java.util.HashMap;
 import java.util.List;
@@ -14,9 +15,11 @@ import java.util.Map;
 @RequestMapping("/api/users")
 public class UserController {
     private final AppUserRepository users;
+    private final PasswordService passwordService;
 
-    public UserController(AppUserRepository users) {
+    public UserController(AppUserRepository users, PasswordService passwordService) {
         this.users = users;
+        this.passwordService = passwordService;
     }
 
     // VULNERABILITY(API1: BOLA/IDOR) - no ownership check, any authenticated OR anonymous GET (due to SecurityConfig) can fetch any user
@@ -26,8 +29,14 @@ public class UserController {
     }
 
     // VULNERABILITY(API6: Mass Assignment) - binds role/isAdmin from client
+    // SECURITY IMPROVEMENT: Hash password before saving
     @PostMapping
     public AppUser create(@Valid @RequestBody AppUser body) {
+        // Hash the password before saving
+        if (body.getPassword() != null && !body.getPassword().isEmpty()) {
+            String hashedPassword = passwordService.hashPassword(body.getPassword());
+            body.setPassword(hashedPassword);
+        }
         return users.save(body);
     }
 

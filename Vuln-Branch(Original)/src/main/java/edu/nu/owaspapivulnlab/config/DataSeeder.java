@@ -14,10 +14,33 @@ public class DataSeeder {
     CommandLineRunner seed(AppUserRepository users, AccountRepository accounts) {
         return args -> {
             if (users.count() == 0) {
-                AppUser u1 = users.save(AppUser.builder().username("alice").password("alice123").email("alice@cydea.tech").role("USER").isAdmin(false).build());
-                AppUser u2 = users.save(AppUser.builder().username("bob").password("bob123").email("bob@cydea.tech").role("ADMIN").isAdmin(true).build());
-                accounts.save(Account.builder().ownerUserId(u1.getId()).iban("PK00-ALICE").balance(1000.0).build());
-                accounts.save(Account.builder().ownerUserId(u2.getId()).iban("PK00-BOB").balance(5000.0).build());
+                AppUser u1 = new AppUser();
+                u1.setUsername("alice");
+                u1.setPassword("alice123");
+                u1.setEmail("alice@cydea.tech");
+                u1.setRole("USER");
+                u1.setAdmin(false);
+                u1 = users.save(u1);
+                
+                AppUser u2 = new AppUser();
+                u2.setUsername("bob");
+                u2.setPassword("bob123");
+                u2.setEmail("bob@cydea.tech");
+                u2.setRole("ADMIN");
+                u2.setAdmin(true);
+                u2 = users.save(u2);
+                
+                Account acc1 = new Account();
+                acc1.setOwnerUserId(u1.getId());
+                acc1.setIban("PK00-ALICE");
+                acc1.setBalance(1000.0);
+                accounts.save(acc1);
+                
+                Account acc2 = new Account();
+                acc2.setOwnerUserId(u2.getId());
+                acc2.setIban("PK00-BOB");
+                acc2.setBalance(5000.0);
+                accounts.save(acc2);
             }
         };
     }
