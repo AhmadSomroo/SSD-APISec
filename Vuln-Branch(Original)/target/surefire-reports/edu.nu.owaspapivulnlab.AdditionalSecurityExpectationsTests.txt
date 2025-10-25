@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: edu.nu.owaspapivulnlab.AdditionalSecurityExpectationsTests
 -------------------------------------------------------------------------------
-Tests run: 5, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 11.23 s <<< FAILURE! -- in edu.nu.owaspapivulnlab.AdditionalSecurityExpectationsTests
-edu.nu.owaspapivulnlab.AdditionalSecurityExpectationsTests.jwt_must_be_valid_and_aud_iss_checked -- Time elapsed: 1.232 s <<< FAILURE!
+Tests run: 5, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 16.17 s <<< FAILURE! -- in edu.nu.owaspapivulnlab.AdditionalSecurityExpectationsTests
+edu.nu.owaspapivulnlab.AdditionalSecurityExpectationsTests.jwt_must_be_valid_and_aud_iss_checked -- Time elapsed: 1.919 s <<< FAILURE!
 java.lang.AssertionError: Status expected:<401> but was:<200>
 	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
 	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
