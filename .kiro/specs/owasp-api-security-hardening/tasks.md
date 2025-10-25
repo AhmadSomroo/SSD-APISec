@@ -113,15 +113,21 @@
   - Update controllers to use DTOs instead of entities
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 4.1 Create user DTOs and mappers
+- [x] 4.1 Create user DTOs and mappers
+
+
   - Create UserResponseDTO excluding sensitive fields
   - Create UserCreateRequestDTO for user creation
   - Implement UserMapper for entity-DTO conversion
   - _Requirements: 4.1, 4.2, 4.3_
 
+
+
 - [ ] 4.2 Create account DTOs and mappers
   - Create AccountResponseDTO for safe account data exposure
   - Create AccountTransferRequestDTO for transfer operations
+
+
   - Implement AccountMapper for entity-DTO conversion
   - _Requirements: 4.3, 4.4_
 
@@ -161,7 +167,8 @@
   - Test validation error responses
   - _Requirements: 6.1, 6.2, 6.3_
 
-- [ ] 6. Implement rate limiting for abuse prevention
+- [-] 6. Implement rate limiting for abuse prevention
+
   - Add Bucket4j dependency for rate limiting
   - Implement rate limiting for critical endpoints
   - Configure different limits for different endpoint types

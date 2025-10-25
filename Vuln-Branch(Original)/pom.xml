@@ -72,6 +72,12 @@
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- SECURITY FIX: Rate limiting dependency -->
+    <dependency>
+      <groupId>com.bucket4j</groupId>
+      <artifactId>bucket4j-core</artifactId>
+      <version>8.7.0</version>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
