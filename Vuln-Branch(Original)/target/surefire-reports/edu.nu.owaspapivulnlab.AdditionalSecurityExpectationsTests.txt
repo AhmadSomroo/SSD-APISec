@@ -1,15 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: edu.nu.owaspapivulnlab.AdditionalSecurityExpectationsTests
 -------------------------------------------------------------------------------
-Tests run: 5, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 16.17 s <<< FAILURE! -- in edu.nu.owaspapivulnlab.AdditionalSecurityExpectationsTests
-edu.nu.owaspapivulnlab.AdditionalSecurityExpectationsTests.jwt_must_be_valid_and_aud_iss_checked -- Time elapsed: 1.919 s <<< FAILURE!
-java.lang.AssertionError: Status expected:<401> but was:<200>
-	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
-	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
-	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:637)
-	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
-	at edu.nu.owaspapivulnlab.AdditionalSecurityExpectationsTests.jwt_must_be_valid_and_aud_iss_checked(AdditionalSecurityExpectationsTests.java:62)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
-
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.973 s -- in edu.nu.owaspapivulnlab.AdditionalSecurityExpectationsTests

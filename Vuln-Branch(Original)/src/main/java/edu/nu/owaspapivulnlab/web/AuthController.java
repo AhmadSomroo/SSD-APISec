@@ -57,8 +57,26 @@ public class AuthController {
         public void setToken(String token) { this.token = token; }
     }
 
-    @PostMapping("/login")
+    @PostMapping(value = "/login", consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> login(@RequestBody LoginReq req) {
+        System.out.println("JSON login request received for user: " + req.username());
+        return processLogin(req);
+    }
+    
+    // Fallback login endpoint that accepts form data (for curl compatibility)
+    @PostMapping(value = "/login-form", consumes = "application/x-www-form-urlencoded", produces = "application/json")
+    public ResponseEntity<?> loginForm(@RequestParam String username, @RequestParam String password) {
+        System.out.println("Form login request received for user: " + username);
+        
+        // Create LoginReq object from form parameters
+        LoginReq req = new LoginReq(username, password);
+        
+        // Reuse the same login logic
+        return processLogin(req);
+    }
+    
+    // Extract common login logic
+    private ResponseEntity<?> processLogin(LoginReq req) {
         AppUser user = users.findByUsername(req.username()).orElse(null);
         if (user != null) {
             boolean isValidPassword = false;
@@ -96,5 +114,14 @@ public class AuthController {
         Map<String, String> error = new HashMap<>();
         error.put("error", "invalid credentials");
         return ResponseEntity.status(401).body(error);
+    }
+    
+    // Test endpoint to verify JSON handling
+    @PostMapping(value = "/test", consumes = "application/json", produces = "application/json")
+    public ResponseEntity<?> test(@RequestBody Map<String, String> data) {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "JSON received successfully");
+        response.put("received", data.toString());
+        return ResponseEntity.ok(response);
     }
 }

@@ -17,4 +17,5 @@ edu\nu\owaspapivulnlab\model\Account.class
 edu\nu\owaspapivulnlab\OwaspApiVulnLabApplication.class
 edu\nu\owaspapivulnlab\web\AdminController.class
 edu\nu\owaspapivulnlab\config\DataSeeder.class
+edu\nu\owaspapivulnlab\config\WebConfig.class
 edu\nu\owaspapivulnlab\service\BCryptPasswordService.class
