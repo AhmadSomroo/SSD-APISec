@@ -59,15 +59,40 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginReq req) {
-        // SECURITY IMPROVEMENT: Use BCrypt for secure password validation
         AppUser user = users.findByUsername(req.username()).orElse(null);
-        if (user != null && passwordService.validatePassword(req.password(), user.getPassword())) {
-            Map<String, Object> claims = new HashMap<>();
-            claims.put("role", user.getRole());
-            claims.put("isAdmin", user.isAdmin()); // VULN: trusts client-side role later
-            String token = jwt.issue(user.getUsername(), claims);
-            return ResponseEntity.ok(new TokenRes(token));
+        if (user != null) {
+            boolean isValidPassword = false;
+            
+            // Check if password is already hashed (BCrypt format)
+            if (user.getPassword().startsWith("$2")) {
+                // Use BCrypt validation for hashed passwords
+                isValidPassword = passwordService.validatePassword(req.password(), user.getPassword());
+            } else {
+                // For plaintext passwords (during transition), do direct comparison
+                isValidPassword = req.password().equals(user.getPassword());
+                
+                // Migrate the password on successful login if it meets strength requirements
+                if (isValidPassword && passwordService.isPasswordStrong(user.getPassword())) {
+                    try {
+                        String hashedPassword = passwordService.hashPassword(user.getPassword());
+                        user.setPassword(hashedPassword);
+                        users.save(user);
+                        System.out.println("Migrated password for user: " + user.getUsername());
+                    } catch (Exception e) {
+                        System.err.println("Failed to migrate password for user " + user.getUsername() + ": " + e.getMessage());
+                    }
+                }
+            }
+            
+            if (isValidPassword) {
+                Map<String, Object> claims = new HashMap<>();
+                claims.put("role", user.getRole());
+                claims.put("isAdmin", user.isAdmin());
+                String token = jwt.issue(user.getUsername(), claims);
+                return ResponseEntity.ok(new TokenRes(token));
+            }
         }
+        
         Map<String, String> error = new HashMap<>();
         error.put("error", "invalid credentials");
         return ResponseEntity.status(401).body(error);

@@ -17,7 +17,9 @@ public class JwtService {
     @Value("${app.jwt.ttl-seconds}")
     private long ttlSeconds;
 
-    // VULNERABILITY(API8): HS256 with trivial key, long TTL, missing issuer/audience
+    private static final String ISSUER = "owasp-api-vuln-lab";
+    private static final String AUDIENCE = "api-users";
+
     public String issue(String subject, Map<String, Object> claims) {
         long now = System.currentTimeMillis();
         return Jwts.builder()
@@ -25,6 +27,8 @@ public class JwtService {
                 .addClaims(claims)
                 .setIssuedAt(new Date(now))
                 .setExpiration(new Date(now + ttlSeconds * 1000))
+                .setIssuer(ISSUER)
+                .setAudience(AUDIENCE)
                 .signWith(SignatureAlgorithm.HS256, secret.getBytes())
                 .compact();
     }

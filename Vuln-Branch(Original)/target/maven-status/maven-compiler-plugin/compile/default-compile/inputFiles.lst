@@ -9,6 +9,7 @@ G:\SSD\Assigments\A3\SSD-APISec\Vuln-Branch(Original)\src\main\java\edu\nu\owasp
 G:\SSD\Assigments\A3\SSD-APISec\Vuln-Branch(Original)\src\main\java\edu\nu\owaspapivulnlab\web\AdminController.java
 G:\SSD\Assigments\A3\SSD-APISec\Vuln-Branch(Original)\src\main\java\edu\nu\owaspapivulnlab\service\PasswordService.java
 G:\SSD\Assigments\A3\SSD-APISec\Vuln-Branch(Original)\src\main\java\edu\nu\owaspapivulnlab\web\UserController.java
+G:\SSD\Assigments\A3\SSD-APISec\Vuln-Branch(Original)\src\main\java\edu\nu\owaspapivulnlab\service\ResourceOwnershipValidator.java
 G:\SSD\Assigments\A3\SSD-APISec\Vuln-Branch(Original)\src\main\java\edu\nu\owaspapivulnlab\OwaspApiVulnLabApplication.java
 G:\SSD\Assigments\A3\SSD-APISec\Vuln-Branch(Original)\src\main\java\edu\nu\owaspapivulnlab\web\GlobalErrorHandler.java
 G:\SSD\Assigments\A3\SSD-APISec\Vuln-Branch(Original)\src\main\java\edu\nu\owaspapivulnlab\service\JwtService.java

@@ -1,3 +1,4 @@
+edu\nu\owaspapivulnlab\service\ResourceOwnershipValidator.class
 edu\nu\owaspapivulnlab\web\AuthController$LoginReq.class
 edu\nu\owaspapivulnlab\web\AuthController$TokenRes.class
 edu\nu\owaspapivulnlab\model\AppUser.class

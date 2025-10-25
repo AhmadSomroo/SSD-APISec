@@ -3,6 +3,7 @@ package edu.nu.owaspapivulnlab.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity @NoArgsConstructor @AllArgsConstructor @Builder
 public class AppUser {
@@ -37,6 +38,7 @@ public class AppUser {
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
     
+    @JsonProperty("isAdmin")
     public boolean isAdmin() { return isAdmin; }
     public void setAdmin(boolean admin) { isAdmin = admin; }
     

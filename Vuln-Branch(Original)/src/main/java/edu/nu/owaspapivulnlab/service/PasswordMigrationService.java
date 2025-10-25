@@ -43,13 +43,18 @@ public class PasswordMigrationService implements CommandLineRunner {
             if (needsMigration(user.getPassword())) {
                 try {
                     String originalPassword = user.getPassword();
-                    String hashedPassword = passwordService.hashPassword(originalPassword);
-                    user.setPassword(hashedPassword);
-                    userRepository.save(user);
-                    migratedCount++;
-                    
-                    // Log migration (in production, use proper logging)
-                    System.out.println("Migrated password for user: " + user.getUsername());
+                    // Only hash passwords that meet strength requirements
+                    if (passwordService.isPasswordStrong(originalPassword)) {
+                        String hashedPassword = passwordService.hashPassword(originalPassword);
+                        user.setPassword(hashedPassword);
+                        userRepository.save(user);
+                        migratedCount++;
+                        
+                        // Log migration (in production, use proper logging)
+                        System.out.println("Migrated password for user: " + user.getUsername());
+                    } else {
+                        System.out.println("Skipped migration for user " + user.getUsername() + " - password does not meet strength requirements");
+                    }
                 } catch (Exception e) {
                     // Log error but continue with other users
                     System.err.println("Failed to migrate password for user " + user.getUsername() + ": " + e.getMessage());
@@ -92,10 +97,13 @@ public class PasswordMigrationService implements CommandLineRunner {
         for (AppUser user : users) {
             if (needsMigration(user.getPassword())) {
                 try {
-                    String hashedPassword = passwordService.hashPassword(user.getPassword());
-                    user.setPassword(hashedPassword);
-                    userRepository.save(user);
-                    migratedCount++;
+                    // Only hash passwords that meet strength requirements
+                    if (passwordService.isPasswordStrong(user.getPassword())) {
+                        String hashedPassword = passwordService.hashPassword(user.getPassword());
+                        user.setPassword(hashedPassword);
+                        userRepository.save(user);
+                        migratedCount++;
+                    }
                 } catch (Exception e) {
                     // Log error but continue
                     System.err.println("Migration failed for user " + user.getUsername() + ": " + e.getMessage());

@@ -66,25 +66,36 @@
   - Test environment variable configuration
   - _Requirements: 7.1, 7.3, 7.4_
 
-- [ ] 3. Implement strict access control and authorization
+- [x] 3. Implement strict access control and authorization
+
+
+
+
+
   - Remove permitAll from GET /api/** endpoints
   - Enforce authentication for all protected endpoints
   - Implement role-based access control for admin functions
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 3.1 Update SecurityFilterChain configuration
+- [x] 3.1 Update SecurityFilterChain configuration
+
+
   - Remove permitAll from /api/** GET endpoints
   - Require authentication for all endpoints except auth endpoints
   - Ensure proper role-based access for admin endpoints
   - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 3.2 Implement resource ownership validation service
+- [x] 3.2 Implement resource ownership validation service
+
+
   - Create ResourceOwnershipValidator to check user ownership
   - Add utility methods to map JWT subject to user ID
   - Implement ownership validation for accounts and user resources
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 3.3 Update controllers with ownership validation
+- [x] 3.3 Update controllers with ownership validation
+
+
   - Add ownership checks to AccountController methods
   - Add ownership checks to UserController methods
   - Ensure proper HTTP 403 responses for unauthorized access
