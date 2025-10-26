@@ -1,9 +1,11 @@
 package edu.nu.owaspapivulnlab.config;
 
+import edu.nu.owaspapivulnlab.filter.RateLimitingFilter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,30 +27,58 @@ public class SecurityConfig {
 
     @Value("${app.jwt.secret}")
     private String secret;
+    
+    @Autowired
+    private RateLimitingFilter rateLimitingFilter;
 
-    // VULNERABILITY(API7 Security Misconfiguration): overly permissive CORS/CSRF and antMatchers order
+    // SECURITY FIX: Hardened SecurityFilterChain configuration
+    // FIXED: API7 Security Misconfiguration - Removed overly permissive endpoint access
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable()); // APIs typically stateless; but add CSRF for state-changing in real apps
         http.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         http.authorizeHttpRequests(reg -> reg
-                .requestMatchers("/api/auth/**", "/h2-console/**").permitAll()
-                // VULNERABILITY: broad permitAll on GET allows data scraping (API1/2 depending on context)
-                .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
+                // SECURITY FIX: Only allow specific auth endpoints and user registration
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/h2-console/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/users").permitAll() // Allow user registration only
+                
+                // SECURITY FIX: Enforce role-based access control for admin endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                
+                // SECURITY FIX: Require authentication for ALL other API endpoints
+                // FIXED: Removed broad permitAll on GET /api/** that allowed data scraping
+                .requestMatchers("/api/**").authenticated()
                 .anyRequest().authenticated()
+        );
+
+        // SECURITY FIX: Configure proper authentication entry point to return 401 instead of 403
+        // This ensures proper HTTP status codes for unauthenticated requests
+        http.exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\":\"Unauthorized\"}");
+                })
         );
 
         http.headers(h -> h.frameOptions(f -> f.disable())); // allow H2 console
 
+        // SECURITY FIX: Add rate limiting filter before JWT filter
+        // FIXED: API4 Lack of Resources & Rate Limiting - Prevents abuse and brute-force attacks
+        http.addFilterBefore(rateLimitingFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(new JwtFilter(secret), org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
-    // Minimal JWT filter (VULNERABILITY: weak validation - no audience, issuer checks; long TTL)
+    // SECURITY FIX: Enhanced JWT filter with comprehensive validation
+    // FIXED: API8 Weak Authentication - Added issuer/audience validation and proper error handling
     static class JwtFilter extends OncePerRequestFilter {
         private final String secret;
+        // SECURITY FIX: Define expected issuer and audience for JWT validation
+        private static final String EXPECTED_ISSUER = "owasp-api-vuln-lab";
+        private static final String EXPECTED_AUDIENCE = "api-users";
+        
         JwtFilter(String secret) { this.secret = secret; }
 
         @Override
@@ -58,15 +88,27 @@ public class SecurityConfig {
             if (auth != null && auth.startsWith("Bearer ")) {
                 String token = auth.substring(7);
                 try {
-                    Claims c = Jwts.parserBuilder().setSigningKey(secret.getBytes()).build()
+                    // SECURITY FIX: Enhanced JWT validation with issuer and audience checks
+                    // FIXED: Previous implementation had no issuer/audience validation
+                    Claims c = Jwts.parserBuilder()
+                            .setSigningKey(secret.getBytes())
+                            .requireIssuer(EXPECTED_ISSUER)    // SECURITY FIX: Validate issuer
+                            .requireAudience(EXPECTED_AUDIENCE) // SECURITY FIX: Validate audience
+                            .build()
                             .parseClaimsJws(token).getBody();
+                    
                     String user = c.getSubject();
                     String role = (String) c.get("role");
                     UsernamePasswordAuthenticationToken authn = new UsernamePasswordAuthenticationToken(user, null,
                             role != null ? Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role)) : Collections.emptyList());
                     SecurityContextHolder.getContext().setAuthentication(authn);
                 } catch (JwtException e) {
-                    // VULNERABILITY: swallow errors; continue as anonymous (API7)
+                    // SECURITY FIX: Reject invalid tokens with proper error response
+                    // FIXED: Previous implementation swallowed errors and continued as anonymous
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\":\"Invalid or expired token\"}");
+                    return;
                 }
             }
             chain.doFilter(request, response);

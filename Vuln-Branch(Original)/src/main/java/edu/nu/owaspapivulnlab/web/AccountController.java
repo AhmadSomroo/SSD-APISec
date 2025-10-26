@@ -1,15 +1,22 @@
 package edu.nu.owaspapivulnlab.web;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import edu.nu.owaspapivulnlab.dto.AccountResponseDTO;
+import edu.nu.owaspapivulnlab.dto.AccountTransferRequestDTO;
+import edu.nu.owaspapivulnlab.mapper.AccountMapper;
 import edu.nu.owaspapivulnlab.model.Account;
 import edu.nu.owaspapivulnlab.model.AppUser;
 import edu.nu.owaspapivulnlab.repo.AccountRepository;
 import edu.nu.owaspapivulnlab.repo.AppUserRepository;
+import edu.nu.owaspapivulnlab.service.InputValidationService;
+import edu.nu.owaspapivulnlab.service.ResourceOwnershipValidator;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -18,24 +25,75 @@ public class AccountController {
 
     private final AccountRepository accounts;
     private final AppUserRepository users;
+    private final ResourceOwnershipValidator ownershipValidator;
+    private final AccountMapper accountMapper;
+    private final InputValidationService inputValidationService;
 
-    public AccountController(AccountRepository accounts, AppUserRepository users) {
+    public AccountController(AccountRepository accounts, AppUserRepository users, 
+                           ResourceOwnershipValidator ownershipValidator, AccountMapper accountMapper,
+                           InputValidationService inputValidationService) {
         this.accounts = accounts;
         this.users = users;
+        this.ownershipValidator = ownershipValidator;
+        this.accountMapper = accountMapper;
+        this.inputValidationService = inputValidationService;
     }
 
-    // VULNERABILITY(API1: BOLA) - no check whether account belongs to caller
+    // SECURITY FIX: Account balance access with ownership validation
+    // FIXED: API1 BOLA - Users can only access their own account balances
     @GetMapping("/{id}/balance")
-    public Double balance(@PathVariable Long id) {
+    public ResponseEntity<?> balance(@PathVariable("id") Long id) {
+        // SECURITY FIX: Check ownership before accessing account
+        // Prevents users from viewing other users' account balances
+        if (!ownershipValidator.canAccessAccountResource(id)) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Access denied");
+            return ResponseEntity.status(403).body(error);
+        }
+        
         Account a = accounts.findById(id).orElseThrow(() -> new RuntimeException("Account not found"));
-        return a.getBalance();
+        return ResponseEntity.ok(a.getBalance());
     }
 
-    // VULNERABILITY(API4: Unrestricted Resource Consumption) - no rate limiting on transfer
-    // VULNERABILITY(API5/1): no authorization check on owner
+    // SECURITY FIX: Account transfer with ownership validation + DTO validation
+    // FIXED: API1 BOLA - Users can only transfer from their own accounts
+    // FIXED: API9 Improper Assets Management - Validates transfer amounts
     @PostMapping("/{id}/transfer")
-    public ResponseEntity<?> transfer(@PathVariable Long id, @RequestParam Double amount) {
+    public ResponseEntity<?> transfer(@PathVariable("id") Long id, @Valid @RequestBody AccountTransferRequestDTO transferRequest) {
+        // SECURITY FIX: Validate account ID parameter
+        InputValidationService.ValidationResult idValidation = inputValidationService.validateNumericId(id);
+        if (!idValidation.isValid()) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", idValidation.getErrorMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+        
+        // SECURITY FIX: Additional validation for transfer amount
+        InputValidationService.ValidationResult amountValidation = inputValidationService.validateTransferAmount(transferRequest.getAmount());
+        if (!amountValidation.isValid()) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", amountValidation.getErrorMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+        
+        // SECURITY FIX: Check ownership before processing transfer
+        // Prevents users from transferring money from accounts they don't own
+        if (!ownershipValidator.canAccessAccountResource(id)) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Access denied");
+            return ResponseEntity.status(403).body(error);
+        }
+        
         Account a = accounts.findById(id).orElseThrow(() -> new RuntimeException("Account not found"));
+        
+        // SECURITY FIX: Validate transfer amount (DTO validation ensures positive amount)
+        Double amount = transferRequest.getAmount();
+        if (a.getBalance() < amount) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Insufficient balance");
+            return ResponseEntity.status(400).body(error);
+        }
+        
         a.setBalance(a.getBalance() - amount);
         accounts.save(a);
         Map<String, Object> response = new HashMap<>();
@@ -44,10 +102,18 @@ public class AccountController {
         return ResponseEntity.ok(response);
     }
 
-    // Safe-ish helper to view my accounts (still leaks more than needed)
+    // SECURITY FIX: Safe endpoint to view user's own accounts + DTO protection
+    // FIXED: API3 Excessive Data Exposure - Uses DTOs to hide ownerUserId
     @GetMapping("/mine")
     public Object mine(Authentication auth) {
         AppUser me = users.findByUsername(auth != null ? auth.getName() : "anonymous").orElse(null);
-        return me == null ? Collections.emptyList() : accounts.findByOwnerUserId(me.getId());
+        if (me == null) {
+            return Collections.emptyList();
+        }
+        
+        List<Account> userAccounts = accounts.findByOwnerUserId(me.getId());
+        // SECURITY FIX: Use DTOs to prevent exposure of ownerUserId
+        List<AccountResponseDTO> responseDTOs = accountMapper.toResponseDTOs(userAccounts);
+        return responseDTOs;
     }
 }
